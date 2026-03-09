@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedágio Digital Pro</title>
+    <style>
+        /* Definimos as cores padrão (Light) */
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --input-border: #cbd5e1;
+            --result-bg: #f1f5f9;
+        }
+
+        /* Cores para o Modo Escuro */
+        [data-theme="dark"] {
+            --primary: #60a5fa;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --input-border: #475569;
+            --result-bg: #334155;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            transition: background 0.3s, color 0.3s; /* Suaviza a troca */
+        }
+
+        /* Botão de Alternar Tema (Pequeno no canto) */
+        #theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            background: var(--card);
+            border: 1px solid var(--input-border);
+            border-radius: 20px;
+            color: var(--text);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s;
+            z-index: 1000;
+        }
+
+        .container {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 380px;
+        }
+
+        h2 { text-align: center; color: var(--primary); margin-top: 0; }
+
+        .form-group { margin-bottom: 1.2rem; }
+
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; font-weight: 600; }
+
+        select, input {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid var(--input-border);
+            border-radius: 6px;
+            background: var(--card);
+            color: var(--text);
+            box-sizing: border-box;
+        }
+
+        button#btn-calc {
+            width: 100%;
+            padding: 1rem;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #resultado {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: var(--result-bg);
+            border-radius: 6px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <button id="theme-toggle" onclick="toggleTheme()">🌓 Tema</button>
+
+    <div class="container">
+        <h2>💳 Pedágio Digital</h2>
+        
+        <div class="form-group">
+            <label>Veículo:</label>
+            <select id="tipoVeiculo" onchange="toggleEixos()">
+                <option value="carro">Carro (R$ 10)</option>
+                <option value="moto">Moto (R$ 5)</option>
+                <option value="caminhao">Caminhão (R$ 15/eixo)</option>
+                <option value="ambulancia">Ambulância (Isento)</option>
+                <option value="policia">Polícia (Isento)</option>
+            </select>
+        </div>
+
+        <div id="campoEixos" class="form-group hidden">
+            <label>Eixos do Caminhão:</label>
+            <input type="number" id="eixos" min="1" value="2">
+        </div>
+
+        <div class="form-group">
+            <label>Hora da Passagem (0-23):</label>
+            <input type="number" id="hora" min="0" max="23" value="12">
+        </div>
+
+        <button id="btn-calc" onclick="calcular()">Calcular Valor</button>
+
+        <div id="resultado">
+            <strong>Resumo:</strong>
+            <p id="resVeiculo" style="margin: 5px 0;"></p>
+            <p id="resHora" style="margin: 5px 0;"></p>
+            <p id="resValor" style="font-size: 1.3rem; color: var(--primary); font-weight: 800; margin: 10px 0 0 0;"></p>
+            <small id="avisoPico" style="color: #f59e0b; display:none;">⚠️ +20% Horário de Pico aplicado!</small>
+        </div>
+    </div>
+
+    <script>
+        // Lógica do Tema
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                body.removeAttribute('data-theme');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+            }
+        }
+
+        // Lógica do Formulário
+        function toggleEixos() {
+            const tipo = document.getElementById('tipoVeiculo').value;
+            document.getElementById('campoEixos').classList.toggle('hidden', tipo !== 'caminhao');
+        }
+
+        function calcular() {
+            const tipo = document.getElementById('tipoVeiculo').value;
+            const hora = parseInt(document.getElementById('hora').value);
+            const avisoPico = document.getElementById('avisoPico');
+            
+            let valorBase = 0;
+            let isPico = (hora >= 6 && hora <= 9) || (hora >= 17 && hora <= 20);
+
+            if (tipo === "ambulancia" || tipo === "policia") {
+                valorBase = 0;
+            } else if (tipo === "carro") {
+                valorBase = 10;
+            } else if (tipo === "moto") {
+                valorBase = 5;
+            } else if (tipo === "caminhao") {
+                const eixos = parseInt(document.getElementById('eixos').value) || 1;
+                valorBase = eixos * 15;
+            }
+
+            if (isPico && valorBase > 0) {
+                valorBase *= 1.20;
+                avisoPico.style.display = 'block';
+            } else {
+                avisoPico.style.display = 'none';
+            }
+
+            // Exibir Resultados
+            document.getElementById('resVeiculo').innerText = "Veículo: " + tipo;
+            document.getElementById('resHora').innerText = "Hora: " + hora + "h";
+            document.getElementById('resValor').innerText = "Total: R$ " + valorBase.toFixed(2);
+            document.getElementById('resultado').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
